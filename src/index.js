@@ -17,10 +17,20 @@ app.use("/api/v1", routes);
 
 // Err handl middleware
 app.use((err, req, res, next) => {
+  // Handle http-errors
+  if (err.status && err.expose) {
+    return res.status(err.status).json({
+      status: err.details?.status || 0,
+      error: err.message,
+      ...(err.details && { details: err.details.details }),
+    });
+  }
+
+  // Handle other errors
   console.error(err.stack);
   res.status(500).json({
     status: 0,
-    error: "Internal Server Error",
+    error: "Internal server error",
   });
 });
 
