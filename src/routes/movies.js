@@ -74,7 +74,7 @@ router.post("/", validateBody(movieCreateSchema), async (req, res, next) => {
 
 router.get("/", validateQuery(movieQuerySchema), async (req, res, next) => {
   try {
-    const { title, actor, sort, order } = req.query;
+    const { title, actor, sort, order } = req.validatedQuery || {};
 
     let whereClause = {};
     let includeClause = [
@@ -85,12 +85,14 @@ router.get("/", validateQuery(movieQuerySchema), async (req, res, next) => {
       },
     ];
 
+    // Search by title
     if (title) {
       whereClause.title = {
         [Op.like]: `%${title}%`,
       };
     }
 
+    // Search by actor
     if (actor) {
       includeClause[0].where = {
         name: {
@@ -103,7 +105,7 @@ router.get("/", validateQuery(movieQuerySchema), async (req, res, next) => {
     const movies = await Movie.findAll({
       where: whereClause,
       include: includeClause,
-      order: [[sort, order]],
+      order: [[sort || "title", order || "ASC"]],
     });
 
     res.status(200).json({
