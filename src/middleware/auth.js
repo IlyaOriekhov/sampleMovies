@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { User } from "../models/User.js";
+import { User } from "../models/index.js";
 
 const JWT_SECRET =
   process.env.JWT_SECRET || "my-super-secret-jwt-key-change-in-production";
@@ -30,7 +30,6 @@ const authenticateToken = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("JWT verification error:", error.message);
-
     return res.status(401).json({
       status: 0,
       error: "Invalid token",
@@ -51,5 +50,5 @@ const generateToken = (user) => {
     { expiresIn: process.env.JWT_EXPIRES_IN || "24h" }
   );
 };
-//
+
 export { authenticateToken, generateToken };

@@ -13,19 +13,19 @@ const Movie = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        len: [1, 100],
+        len: [1, 255],
       },
     },
     year: {
       type: DataTypes.INTEGER,
       allowNull: false,
       validate: {
-        min: 1888, //first film
-        max: new Date().getFullYear() + 10, // for future
+        min: 1888, // First movie
+        max: new Date().getFullYear() + 10, // Allow future movies
       },
     },
     format: {
-      type: DataTypes.ENUM("VHS", "DVD", "Blu-ray"),
+      type: DataTypes.ENUM("VHS", "DVD", "Blu-Ray"),
       allowNull: false,
     },
   },

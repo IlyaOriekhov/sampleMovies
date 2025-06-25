@@ -5,7 +5,6 @@ import movieRoutes from "./movies.js";
 
 const router = express.Router();
 
-//  routes
 router.use("/users", userRoutes);
 router.use("/sessions", sessionRoutes);
 router.use("/movies", movieRoutes);

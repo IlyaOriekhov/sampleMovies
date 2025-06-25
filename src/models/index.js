@@ -1,4 +1,4 @@
-import sequelize from "../config/database";
+import sequelize from "../config/database.js";
 
 import Actor from "./Actor.js";
 import User from "./User.js";
