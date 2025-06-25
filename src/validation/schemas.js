@@ -74,8 +74,11 @@ export const movieCreateSchema = Joi.object({
 export const movieQuerySchema = Joi.object({
   title: Joi.string().trim().optional(),
   actor: Joi.string().trim().optional(),
-  sort: Joi.string().valid("title", "year").default("title"),
+  search: Joi.string().trim().optional(),
+  sort: Joi.string().valid("id", "title", "year").default("id"),
   order: Joi.string().valid("ASC", "DESC").default("ASC"),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+  offset: Joi.number().integer().min(0).default(0),
 });
 
 export const movieIdSchema = Joi.object({

@@ -74,7 +74,8 @@ router.post("/", validateBody(movieCreateSchema), async (req, res, next) => {
 
 router.get("/", validateQuery(movieQuerySchema), async (req, res, next) => {
   try {
-    const { title, actor, sort, order } = req.validatedQuery || {};
+    const { title, actor, search, sort, order, limit, offset } =
+      req.validatedQuery || {};
 
     let whereClause = {};
     let includeClause = [
@@ -85,31 +86,59 @@ router.get("/", validateQuery(movieQuerySchema), async (req, res, next) => {
       },
     ];
 
-    // Search by title
-    if (title) {
-      whereClause.title = {
-        [Op.like]: `%${title}%`,
+    if (search) {
+      whereClause = {
+        [Op.or]: [
+          {
+            title: {
+              [Op.like]: `%${search}%`,
+            },
+          },
+        ],
       };
-    }
 
-    // Search by actor
-    if (actor) {
       includeClause[0].where = {
         name: {
-          [Op.like]: `%${actor}%`,
+          [Op.like]: `%${search}%`,
         },
       };
-      includeClause[0].required = true;
+      includeClause[0].required = false;
+    } else {
+      if (title) {
+        whereClause.title = {
+          [Op.like]: `%${title}%`,
+        };
+      }
+
+      if (actor) {
+        includeClause[0].where = {
+          name: {
+            [Op.like]: `%${actor}%`,
+          },
+        };
+        includeClause[0].required = true;
+      }
     }
+
+    const totalCount = await Movie.count({
+      where: whereClause,
+      include: includeClause,
+      distinct: true,
+    });
 
     const movies = await Movie.findAll({
       where: whereClause,
       include: includeClause,
-      order: [[sort || "title", order || "ASC"]],
+      order: [[sort || "id", order || "ASC"]],
+      limit: limit || 20,
+      offset: offset || 0,
     });
 
     res.status(200).json({
       data: movies,
+      meta: {
+        total: totalCount,
+      },
       status: 1,
     });
   } catch (error) {
@@ -166,6 +195,70 @@ router.delete("/:id", validateParams(movieIdSchema), async (req, res, next) => {
     next(error);
   }
 });
+
+router.patch(
+  "/:id",
+  validateParams(movieIdSchema),
+  validateBody(movieCreateSchema),
+  async (req, res, next) => {
+    const transaction = await sequelize.transaction();
+
+    try {
+      const { id } = req.params;
+      const { title, year, format, actors } = req.body;
+
+      const movie = await Movie.findByPk(id, { transaction });
+      if (!movie) {
+        await transaction.rollback();
+        return next(notFound("Movie not found"));
+      }
+
+      await movie.update(
+        {
+          title: title.trim(),
+          year,
+          format,
+        },
+        { transaction }
+      );
+
+      await movie.setActors([], { transaction });
+
+      const actorInstances = [];
+      for (const actorName of actors) {
+        const trimmedName = actorName.trim();
+        const [actor] = await Actor.findOrCreate({
+          where: { name: trimmedName },
+          defaults: { name: trimmedName },
+          transaction,
+        });
+        actorInstances.push(actor);
+      }
+
+      await movie.addActors(actorInstances, { transaction });
+      await transaction.commit();
+
+      const updatedMovie = await Movie.findByPk(id, {
+        include: [
+          {
+            model: Actor,
+            as: "actors",
+            through: { attributes: [] },
+          },
+        ],
+      });
+
+      res.status(200).json({
+        data: updatedMovie,
+        status: 1,
+      });
+    } catch (error) {
+      await transaction.rollback();
+      console.error("Error updating movie:", error);
+      next(error);
+    }
+  }
+);
 
 router.post("/import", upload.single("movies"), async (req, res, next) => {
   try {
